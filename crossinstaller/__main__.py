@@ -6,7 +6,7 @@ from crossinstaller import __version__, crosscompile
 
 
 def _compile(args):
-    crosscompile(args.script[0], args.directory, keep_build=args.keep_build, console=True)
+    crosscompile(args.script[0], args.directory, keep_build=args.keep_build)
 
 
 def _parser():
@@ -38,8 +38,6 @@ def _parser():
                          help='Path to script')
     cparser.add_argument('-D', '--directory', metavar='DIRECTORY',
                          help='custom source directory, default is script parent directory')
-    cparser.add_argument('-N', '--name', metavar='NAME',
-                         help='output executable name')
     cparser.add_argument('-K', '--keep-build', action="store_true",
                          help='Copy build directory after creating executable')
     cparser.set_defaults(func=_compile)

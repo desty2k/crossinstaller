@@ -15,19 +15,33 @@ class Generator:
     dockerfile = ""
     build_suffix = ""
 
-    def __init__(self, client, command, keep_build):
+    def __init__(self, client, script_path, script_dir, keep_build):
         super(Generator, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
 
+        # run flags
         self.finished = False
         self.canceled = False
 
-        self.tmp_dir_path = None
+        # relative paths for working dir and dist dir, works both on host and inside containers
+        self.working_dir = os.path.join("./build/", self.build_suffix)
+        self.dist_dir = os.path.join("./dist/", self.build_suffix)
+
+        # create dirs on host
+        os.makedirs(os.path.join(script_dir, self.working_dir), exist_ok=True)
+        os.makedirs(os.path.join(script_dir, self.dist_dir), exist_ok=True)
+
+        # create command with relative paths, will be executed inside containers
+        self.command = "pyinstaller {} --onefile --distpath {} --workpath {} --specpath {}".format(
+            os.path.basename(script_path),
+            self.dist_dir,
+            self.working_dir,
+            self.working_dir)
+
         self.container = None
         self.client = client
-
-        self.command = command
         self.keep_build = keep_build
+        self.script_dir = script_dir
 
     def start(self):
         self.logger.info("Starting Docker image build.")
@@ -67,26 +81,12 @@ class Generator:
             return
 
         try:
-            # create temporary directory and copy client source code
-            self.tmp_dir_path = os.path.realpath(os.path.join("./build/", self.dockerfile))
-            os.makedirs(self.tmp_dir_path, exist_ok=True)
-
-            self.logger.info("Created temporary directory: {}".format(self.tmp_dir_path))
-
-            # copy_tree("./client/", tmp_dir_path)
-            open(os.path.join(self.tmp_dir_path, "test.txt"), "w+").close()
-            self.logger.info("Temporary directory contents: {}".format(os.listdir(self.tmp_dir_path)))
-        except Exception as e:
-            self.logger.error("Failed to create temporary directory: {}".format(e))
-            return
-
-        try:
             # create and run container
             self.logger.info("Creating Docker container from image: {}".format(image_id))
             container_id = self.client.api.create_container(image_id, self.command, detach=False,
                                                             volumes=['/src'],
                                                             host_config=self.client.api.create_host_config(binds={
-                                                                self.tmp_dir_path: {
+                                                                self.script_dir: {
                                                                     'bind': '/src',
                                                                     'mode': 'rw',
                                                                 }
@@ -101,31 +101,17 @@ class Generator:
             # logs = container.attach(stdout=True, stderr=True, stream=True, logs=True)
             # for log in logs:
             #     self.logger.debug(str(log, encoding="utf-8"))
-
-            exit_status = self.container.wait()['StatusCode']
-            # copy executables
-            # if exit_status == 0:
-            #     self.logger.info("Build process completed successfully")
-            #     if self.keep_build:
-            #         output_path = shutil.copytree(self.tmp_dir_path,
-            #                                       os.path.join("./dist/", self.build_suffix))
-            #     else:
-            #         output_path = shutil.copytree(os.path.realpath(os.path.join(
-            #             self.tmp_dir_path, "./dist/")), "./dist/")
-            #     self.logger.info("Executable path: {}".format(output_path))
-            # else:
-            #     self.logger.error(str(self.container.logs(stdout=False, stderr=True), encoding="utf-8"))
         except Exception as e:
-            exit_status = 1
             self.logger.error("An exception occurred while starting Docker container: {}".format(e))
 
+        exit_status = self.container.wait()['StatusCode']
         self.logger.info("{} completed with exit code {}".format(self.dockerfile, exit_status))
         self.cleanup()
 
     def cleanup(self):
         try:
-            if self.tmp_dir_path:
-                shutil.rmtree(self.tmp_dir_path)
+            if not self.keep_build:
+                shutil.rmtree(self.working_dir)
             self.logger.info("Cleanup successfull.")
         except Exception as e:
             self.logger.error("Error while cleaning after build: {}".format(e))
