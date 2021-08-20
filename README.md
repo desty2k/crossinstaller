@@ -1,5 +1,5 @@
 # CrossInstaller
- Create executables for Linux and Windows using one command.
+ Create Python executables for Linux and Windows using one command.
 
 ## Installation
 
