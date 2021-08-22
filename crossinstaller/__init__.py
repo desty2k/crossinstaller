@@ -1,19 +1,65 @@
 import os
+import json
 import time
 import docker
+import shutil
 import logging
 import threading
 
-from crossinstaller.generators import *
+from crossinstaller.platform import Platform
+from crossinstaller.generator import Generator
 from crossinstaller.errors import CrossInstallerError
 
-GENERATORS = [i386Generator, Amd64Generator, Win32Generator, Win64Generator]
+CROSSINSTALLER_DIR = os.path.dirname(__file__)
+IMAGES_DIRECTORY = os.path.join(CROSSINSTALLER_DIR, "./Docker/")
+PLATFORM_FILE = os.path.join(IMAGES_DIRECTORY, "platforms.json")
 
-__all__ = ["__version__", "crosscompile"]
 __version__ = "0.0.2"
+__all__ = ["__version__", "build", "load_platforms", "add_platform", "save_platforms"]
 
 
-def crosscompile(script_path, keep_build=False):
+def load_platforms():
+    with open(PLATFORM_FILE, "r") as f:
+        platforms_dict: dict = json.load(f)
+    platforms = []
+    for key, value in platforms_dict.items():
+        platforms.append(Platform(key, value["image"], extra_files=value["extra_files"]))
+    return platforms
+
+
+def save_platforms(platforms: list[Platform]):
+    platforms_dict = {}
+    platforms_files = ["platforms.json"]
+    for platform in platforms:
+        platforms_dict[platform.name] = {"image": platform.image, "extra_files": platform.extra_files}
+        platforms_files += [platform.image] + platform.extra_files
+    with open(PLATFORM_FILE, "w+") as f:
+        json.dump(platforms_dict, f, indent=4)
+    for file in os.listdir(IMAGES_DIRECTORY):
+        if file not in platforms_files:
+            os.remove(file)
+
+
+def add_platform(name, image, extra_files=None, overwrite=False):
+    platforms = load_platforms()
+    if any(platform.name == name for platform in platforms) and overwrite is False:
+        raise ValueError("Platform '{}' already exists. Use --overwrite / -O to overwrite existing platform.")
+    for platform in platforms:
+        if platform.image == image:
+            raise ValueError("Image '{}' is already being used by '{}' platform.".format(image, platform.name))
+    for platform in platforms:
+        for file in extra_files:
+            if file in platform.extra_files:
+                raise ValueError("Extra file '{}' already exists and is used by '{}' platform.".format(file,
+                                                                                                       platform.name))
+    shutil.copy2(image, IMAGES_DIRECTORY)
+    for file in extra_files:
+        shutil.copy2(file, IMAGES_DIRECTORY)
+    platforms.append(Platform(name, image, extra_files))
+    save_platforms(platforms)
+
+
+def build(script_path, keep_build=False):
     script_path = os.path.realpath(script_path)
     script_dir = os.path.dirname(script_path)
     if not os.path.isfile(script_path):
@@ -27,11 +73,11 @@ def crosscompile(script_path, keep_build=False):
 
     running_generators = []
     try:
-        for generator in GENERATORS:
-            gen_onj = generator(client, script_path, script_dir, keep_build=keep_build)
-            gen_thr = threading.Thread(target=gen_onj.start)
+        for platform in load_platforms():
+            gen_obj = Generator(client, script_path, script_dir, platform.name, platform.image, keep_build)
+            gen_thr = threading.Thread(target=gen_obj.start)
             gen_thr.start()
-            running_generators.append((gen_onj, gen_thr))
+            running_generators.append((gen_obj, gen_thr))
 
         while not all(gen.finished for gen, thr in running_generators):
             time.sleep(5)
