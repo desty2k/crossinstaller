@@ -7,32 +7,30 @@ import itertools
 from docker.utils.json_stream import json_stream
 from docker.errors import BuildError
 
-__all__ = ["i386Generator", "Amd64Generator", "Win32Generator", "Win64Generator"]
-
 
 class Generator:
-    tag = ""
-    dockerfile = ""
-    build_suffix = ""
 
-    def __init__(self, client, script_path, script_dir, keep_build):
+    def __init__(self, client, script_path, script_dir, platform, image, keep_build):
         super(Generator, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
+
+        self.platform = platform
+        self.image = image
 
         # run flags
         self.finished = False
         self.canceled = False
 
         # relative paths for working dir and dist dir, works both on host and inside containers
-        self.working_dir = os.path.join("./build/", self.build_suffix)
-        self.dist_dir = os.path.join("./dist/", self.build_suffix)
+        self.working_dir = os.path.join("./build/", self.platform)
+        self.dist_dir = os.path.join("./dist/", self.platform)
 
         # create dirs on host
         os.makedirs(os.path.join(script_dir, self.working_dir), exist_ok=True)
         os.makedirs(os.path.join(script_dir, self.dist_dir), exist_ok=True)
 
         # create command with relative paths, will be executed inside containers
-        self.command = "pyinstaller {} --onefile --distpath {} --workpath {} --specpath {}".format(
+        self.command = "\"pyinstaller \'{}\' --onefile --distpath {} --workpath {} --specpath {}\"".format(
             os.path.basename(script_path),
             self.dist_dir,
             self.working_dir,
@@ -47,8 +45,8 @@ class Generator:
         self.logger.info("Starting Docker image build.")
         try:
             build_path = os.path.join(os.path.dirname(__file__), "./Docker/")
-            resp = self.client.api.build(path=build_path, dockerfile=self.dockerfile,
-                                         tag=self.tag, quiet=False, rm=True)
+            resp = self.client.api.build(path=build_path, dockerfile=self.image,
+                                         tag="crossinstaller-{}".format(self.platform), quiet=False, rm=True)
             if isinstance(resp, str):
                 return self.docker_run(self.client.images.get(resp))
             last_event = None
@@ -105,7 +103,7 @@ class Generator:
             self.logger.error("An exception occurred while starting Docker container: {}".format(e))
 
         exit_status = self.container.wait()['StatusCode']
-        self.logger.info("{} completed with exit code {}".format(self.dockerfile, exit_status))
+        self.logger.info("{} completed with exit code {}".format(self.platform, exit_status))
         self.cleanup()
 
     def cleanup(self):
@@ -121,27 +119,3 @@ class Generator:
         self.canceled = True
         if self.container:
             self.container.stop()
-
-
-class Win32Generator(Generator):
-    tag = "crossinstaller-win32"
-    dockerfile = "Dockerfile-py3-win32"
-    build_suffix = "win32"
-
-
-class Win64Generator(Generator):
-    tag = "crossinstaller-win64"
-    dockerfile = "Dockerfile-py3-win64"
-    build_suffix = "win64"
-
-
-class Amd64Generator(Generator):
-    tag = "crossinstaller-amd64"
-    dockerfile = "Dockerfile-py3-amd64"
-    build_suffix = "amd64"
-
-
-class i386Generator(Generator):
-    tag = "crossinstaller-i386"
-    dockerfile = "Dockerfile-py3-i386"
-    build_suffix = "i386"
