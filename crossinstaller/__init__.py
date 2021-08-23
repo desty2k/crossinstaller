@@ -91,3 +91,5 @@ def build(script_path, extra_options=None, keep_build=False):
             gen.stop()
             thr.join(10)
         logging.info("Operation cancelled by user")
+    if not keep_build:
+        shutil.rmtree(BUILD_DIRECTORY, ignore_errors=True)
