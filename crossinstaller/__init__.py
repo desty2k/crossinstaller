@@ -16,7 +16,7 @@ IMAGES_DIRECTORY = os.path.join(CROSSINSTALLER_DIRECTORY, "./Docker/")
 PLATFORM_FILE = os.path.join(IMAGES_DIRECTORY, "platforms.json")
 
 __all__ = ["__version__", "build", "load_platforms", "add_platform", "save_platforms"]
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 
 def load_platforms():
