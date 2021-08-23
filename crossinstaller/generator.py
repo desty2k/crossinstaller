@@ -10,7 +10,7 @@ from docker.errors import BuildError
 
 class Generator:
 
-    def __init__(self, client, script_path, script_dir, platform, image, keep_build):
+    def __init__(self, client, script_name, script_dir, platform, image, keep_build, extra_options):
         super(Generator, self).__init__()
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -30,11 +30,12 @@ class Generator:
         os.makedirs(os.path.join(script_dir, self.dist_dir), exist_ok=True)
 
         # create command with relative paths, will be executed inside containers
-        self.command = "\"pyinstaller \'{}\' --onefile --distpath {} --workpath {} --specpath {}\"".format(
-            os.path.basename(script_path),
+        self.command = "\"pyinstaller \'{}\' --onefile --distpath {} --workpath {} --specpath {} {}\"".format(
+            script_name,
             self.dist_dir,
             self.working_dir,
-            self.working_dir)
+            self.working_dir,
+            extra_options)
 
         self.container = None
         self.client = client

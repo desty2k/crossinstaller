@@ -6,13 +6,12 @@ from crossinstaller import __version__, build, load_platforms, add_platform, sav
 
 
 def _build(args):
-    build(args.script[0], keep_build=args.keep_build)
+    build(args.script[0], extra_options=args.options, keep_build=args.keep)
 
 
 def _platform_list(args):
     print("Name - Image - Extra files")
-    platforms = load_platforms()
-    for platform in platforms:
+    for platform in load_platforms():
         print(platform.name, " - ", platform.image, " -  [", " ".join(extra for extra in platform.extra_files), "]")
 
 
@@ -47,7 +46,6 @@ def _parser():
         epilog='See "crossinstaller <command> -h" for more information '
                'on a specific command.'
     )
-
     parser.add_argument('-V', '--version', action='version', version='v{}'.format(__version__),
                         help='print version and exit')
 
@@ -66,8 +64,10 @@ def _parser():
     )
     cparser.add_argument('script', nargs=1, metavar='SCRIPT',
                          help='Path to script')
-    cparser.add_argument('-K', '--keep-build', action="store_true",
-                         help='Copy build directory after creating executable')
+    cparser.add_argument('--keep', '--debug', action="store_true",
+                         help='Do not remove build files after creating executables')
+    cparser.add_argument('-e', '--options', metavar='EXTRA_OPTIONS',
+                         help='Pass these extra options to `pyinstaller`')
     cparser.set_defaults(func=_build)
 
     # subparser for editing platforms and Docker images

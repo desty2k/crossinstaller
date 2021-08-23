@@ -10,8 +10,9 @@ from crossinstaller.platform import Platform
 from crossinstaller.generator import Generator
 from crossinstaller.errors import CrossInstallerError
 
-CROSSINSTALLER_DIR = os.path.dirname(__file__)
-IMAGES_DIRECTORY = os.path.join(CROSSINSTALLER_DIR, "./Docker/")
+CROSSINSTALLER_DIRECTORY = os.path.dirname(__file__)
+BUILD_DIRECTORY = os.path.join(CROSSINSTALLER_DIRECTORY, "./build/")
+IMAGES_DIRECTORY = os.path.join(CROSSINSTALLER_DIRECTORY, "./Docker/")
 PLATFORM_FILE = os.path.join(IMAGES_DIRECTORY, "platforms.json")
 
 __all__ = ["__version__", "build", "load_platforms", "add_platform", "save_platforms"]
@@ -59,11 +60,14 @@ def add_platform(name, image, extra_files=None, overwrite=False):
     save_platforms(platforms)
 
 
-def build(script_path, keep_build=False):
+def build(script_path, extra_options=None, keep_build=False):
     script_path = os.path.realpath(script_path)
+    script_name = os.path.basename(script_path)
     script_dir = os.path.dirname(script_path)
     if not os.path.isfile(script_path):
         raise CrossInstallerError("{} not a file".format(script_path))
+    if extra_options is None:
+        extra_options = ""
 
     try:
         client = docker.from_env()
@@ -74,7 +78,8 @@ def build(script_path, keep_build=False):
     running_generators = []
     try:
         for platform in load_platforms():
-            gen_obj = Generator(client, script_path, script_dir, platform.name, platform.image, keep_build)
+            gen_obj = Generator(client, script_name, script_dir, platform.name,
+                                platform.image, keep_build, extra_options)
             gen_thr = threading.Thread(target=gen_obj.start)
             gen_thr.start()
             running_generators.append((gen_obj, gen_thr))
