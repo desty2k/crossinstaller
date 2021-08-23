@@ -71,7 +71,7 @@ class Generator:
             raise BuildError(last_event or 'Unknown', result_stream)
         except Exception as e:
             self.logger.error("An exception occurred while starting Docker image building process: {}".format(e))
-            return
+            self.cleanup()
 
     def docker_run(self, image_id: str):
         if self.canceled:
