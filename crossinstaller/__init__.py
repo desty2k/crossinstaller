@@ -21,7 +21,7 @@ __version__ = "0.0.4"
 
 def load_platforms():
     with open(PLATFORM_FILE, "r") as f:
-        platforms_dict: dict = json.load(f)
+        platforms_dict: dict = json.load(f).get("platforms", {})
     platforms = []
     for key, value in platforms_dict.items():
         platforms.append(Platform(key, value["image"], extra_files=value["extra_files"]))
@@ -30,9 +30,10 @@ def load_platforms():
 
 def save_platforms(platforms: list[Platform]):
     platforms_dict = {}
+    platforms_dict = {"version": __version__, "platforms": {}}
     platforms_files = ["platforms.json"]
     for platform in platforms:
-        platforms_dict[platform.name] = {"image": platform.image, "extra_files": platform.extra_files}
+        platforms_dict["platforms"][platform.name] = {"image": platform.image, "extra_files": platform.extra_files}
         platforms_files += [platform.image] + platform.extra_files
     with open(PLATFORM_FILE, "w+") as f:
         json.dump(platforms_dict, f, indent=4)
