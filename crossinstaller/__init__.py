@@ -15,8 +15,12 @@ BUILD_DIRECTORY = os.path.join(CROSSINSTALLER_DIRECTORY, "./build/")
 IMAGES_DIRECTORY = os.path.join(CROSSINSTALLER_DIRECTORY, "./Docker/")
 PLATFORM_FILE = os.path.join(IMAGES_DIRECTORY, "platforms.json")
 
-__all__ = ["__version__", "build", "load_platforms", "add_platform", "save_platforms"]
 __version__ = "0.0.4"
+__all__ = ["__version__", "build", "load_platforms", "add_platform", "save_platforms", "clear_platforms"]
+
+def clear_platforms():
+    with open(PLATFORM_FILE, "w+") as f:
+        json.dump({"version": __version__, "platforms": {}}, f, indent=4)
 
 
 def load_platforms():

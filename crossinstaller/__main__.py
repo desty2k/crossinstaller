@@ -2,7 +2,7 @@ import sys
 import logging
 import argparse
 
-from crossinstaller import __version__, build, load_platforms, add_platform, save_platforms
+from crossinstaller import __version__, build, load_platforms, add_platform, save_platforms, clear_platforms
 
 
 def _build(args):
@@ -22,6 +22,23 @@ def _platform_add(args):
         extra = []
     add_platform(args.name[0], args.image, extra, overwrite=args.overwrite)
     print("Platform '{}' added successfully".format(args.name[0]))
+
+
+def _platform_clear(args):
+    if not args.force:
+        print("Are you sure? [y/n]")
+        opt = input().lower()
+        if opt == "y":
+            clear_platforms()
+        elif opt == "n":
+            print("Operation cancelled")
+            return
+        else:
+            print("'{}' is not valid option".format(opt))
+            return
+    else:
+        clear_platforms()
+    print("Platforms removed successfully")
 
 
 def _platform_remove(args):
@@ -113,6 +130,18 @@ def _parser():
     platform_cparser.add_argument('name', nargs=1, metavar='NAME',
                                   help='Platform name')
     platform_cparser.set_defaults(func=_platform_remove)
+
+    # clear all platforms
+    platform_cparser = platform_subparser.add_parser(
+        'clear',
+        aliases=['c'],
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help='Remove all platforms',
+        description='Remove all platforms'
+    )
+    platform_cparser.add_argument('-F', '--force', action="store_true",
+                                  help='Do not ask for confirmation')
+    platform_cparser.set_defaults(func=_platform_clear)
 
     # print all platforms
     platform_cparser = platform_subparser.add_parser(
