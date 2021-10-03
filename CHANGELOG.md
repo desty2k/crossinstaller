@@ -1,5 +1,11 @@
 # Changelog
 
+- 0.0.5:
+  - Add clear platforms option
+  - Add `version` key in platform.json
+  - Fix FileNotFound when removing unused files from images directory
+  - Add build and deploy workflows
+
 - 0.0.4:
   - Add `-e / --extra` for extra arguments for PyInstaller
   - Remove `build` directory when all containers exit
