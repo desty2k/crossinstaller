@@ -29,7 +29,8 @@ def load_platforms():
 
 
 def save_platforms(platforms: list[Platform]):
-    platforms_dict = {}
+    original_wd = os.getcwd()
+    os.chdir(IMAGES_DIRECTORY)
     platforms_dict = {"version": __version__, "platforms": {}}
     platforms_files = ["platforms.json"]
     for platform in platforms:
@@ -40,6 +41,7 @@ def save_platforms(platforms: list[Platform]):
     for file in os.listdir(IMAGES_DIRECTORY):
         if file not in platforms_files:
             os.remove(file)
+    os.chdir(original_wd)
 
 
 def add_platform(name, image, extra_files=None, overwrite=False):
