@@ -7,4 +7,3 @@ PLATFORM_FILE = os.path.join(IMAGES_DIRECTORY, "platforms.json")
 
 __all__ = ("__version__", "CROSSINSTALLER_DIRECTORY", "BUILD_DIRECTORY", "IMAGES_DIRECTORY", "PLATFORM_FILE")
 __version__ = "0.1.0"
-
