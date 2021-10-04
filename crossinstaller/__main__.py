@@ -2,7 +2,8 @@ import sys
 import logging
 import argparse
 
-from crossinstaller import __version__, build, load_platforms, add_platform, save_platforms, clear_platforms
+from crossinstaller import __version__
+from crossinstaller.building import build, load_platforms, add_platform, save_platforms, clear_platforms
 
 
 def _build(args):
