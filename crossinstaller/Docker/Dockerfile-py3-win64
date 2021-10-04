@@ -5,7 +5,6 @@ ENV DEBIAN_FRONTEND noninteractive
 ARG WINE_VERSION=winehq-stable
 ARG PYTHON_VERSION=3.9.4
 ARG PYINSTALLER_VERSION=4.3
-ARG PYARMOR_VERSION=6.7.0
 
 # we need wine for this all to work, so we'll use the PPA
 RUN set -x \
@@ -74,7 +73,6 @@ RUN set -x \
 
 # install pyinstaller and pyarmor
 RUN /usr/bin/pip install pyinstaller==$PYINSTALLER_VERSION
-RUN /usr/bin/pip install pyarmor==$PYARMOR_VERSION
 
 # put the src folder inside wine
 RUN mkdir /src/ && ln -s /src /wine/drive_c/src
