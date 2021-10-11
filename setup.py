@@ -23,6 +23,7 @@ setup(
     zip_safe=False,  # don't use eggs
     long_description=long_desc,
 
+    install_requires=['docker'],
     package_data={'': ['./Docker/*']},
     include_package_data=True,
 
