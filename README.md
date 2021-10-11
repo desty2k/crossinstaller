@@ -1,5 +1,10 @@
 # CrossInstaller
- Create Python executables for Linux and Windows using one command.
+
+[![Build](https://github.com/desty2k/crossinstaller/actions/workflows/build.yml/badge.svg)](https://github.com/desty2k/crossinstaller/actions/workflows/build.yml)
+[![Version](https://img.shields.io/pypi/v/crossinstaller)](https://pypi.org/project/crossinstaller/)
+[![Version](https://img.shields.io/pypi/dm/crossinstaller)](https://pypi.org/project/crossinstaller/)
+
+Create Python executables for Linux and Windows using one command.
 
 ## Installation
 
