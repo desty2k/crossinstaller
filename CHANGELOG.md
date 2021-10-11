@@ -5,6 +5,8 @@
   - Get version from `\_\_init__` not `\_\_main__`when installing
   - Remove pyarmor from Dockerfiles
   - Do not require `docker` package in `build` workflow
+  - Add badges to readme
+  - Require `docker` package when installing `crossisntaller`
 
 - 0.0.5:
   - Add clear platforms option
