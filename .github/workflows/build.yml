@@ -94,19 +94,10 @@ jobs:
         echo "Latest package version is:"
         echo "${{env.RELEASE_VERSION}}"
 
-    - name: Create a first release
-      if: env.BUILD_VERSION != env.RELEASE_VERSION && env.RELEASE_VERSION == ''
-      uses: softprops/action-gh-release@v1
-      with:
-        body: 'First release'
-        tag_name: ${{ env.BUILD_VERSION }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-
     - name: Generate changelog
       if: env.BUILD_VERSION != env.RELEASE_VERSION && env.RELEASE_VERSION != ''
       id: changelog
-      uses: metcalfc/changelog-generator@v1.0.0
+      uses: metcalfc/changelog-generator@v3.0.0
       with:
         myToken: ${{ secrets.PUBLISH_TOKEN }}
 
