@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 # Package imports
-from crossinstaller import __version__
+from crossinstaller.config import __version__
 
 with open("README.md", "r", encoding="utf-8") as f:
     long_desc = f.read()

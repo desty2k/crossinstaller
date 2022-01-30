@@ -1,169 +1,83 @@
+import os
 import sys
 import logging
 import argparse
+from pathlib import Path
 
-from crossinstaller.building import build, load_platforms, add_platform, save_platforms, clear_platforms
+from crossinstaller import CrossInstaller
 from crossinstaller.config import __version__
+from crossinstaller.platform import get_default_platforms, get_platform_by_name
 
 
 def _build(args):
-    build(args.script[0], extra_options=args.options, keep_build=args.keep)
+    # check if script exists
+    script_path = Path(args.script[0])
+    if not script_path.exists():
+        raise FileNotFoundError(f"script {script_path} not found")
+    # make sure we are in the script's directory
+    os.chdir(script_path.parent)
 
-
-def _platform_list(args):
-    print("Name - Image - Extra files")
-    for platform in load_platforms():
-        print(platform.name, " - ", platform.image, " -  [", " ".join(extra for extra in platform.extra_files), "]")
-
-
-def _platform_add(args):
-    if args.extra_file is not None:
-        extra = [arg[0] for arg in args.extra_file]
+    # check if platforms are specified
+    def_platforms = get_default_platforms()
+    platforms = []
+    if args.platform is None:
+        platforms = def_platforms
     else:
-        extra = []
-    add_platform(args.name[0], args.image, extra, overwrite=args.overwrite)
-    print("Platform '{}' added successfully".format(args.name[0]))
+        for arg_platform in args.platform:
+            platform = get_platform_by_name(arg_platform)
+            if platform is None:
+                raise ValueError(f"unknown platform {arg_platform}, available platforms: "
+                                 f"{', '.join([p.name for p in def_platforms])}")
+            platforms.append(platform)
 
+    # check if options are specified
+    options = args.options if args.options is not None else ""
 
-def _platform_clear(args):
-    if not args.force:
-        print("Are you sure? [y/n]")
-        opt = input().lower()
-        if opt == "y":
-            clear_platforms()
-        elif opt == "n":
-            print("Operation cancelled")
-            return
-        else:
-            print("'{}' is not valid option".format(opt))
-            return
-    else:
-        clear_platforms()
-    print("Platforms removed successfully")
-
-
-def _platform_remove(args):
-    platforms = load_platforms()
-    platform_to_delete = None
-    for platform in platforms:
-        if platform.name == args.name[0]:
-            platform_to_delete = platform
-    if platform_to_delete is None:
-        raise KeyError("platform '{}' does not exists".format(args.name[0]))
-    else:
-        platforms.remove(platform_to_delete)
-        save_platforms(platforms)
-        print("Platform '{}' removed successfully".format(args.name[0]))
+    builder = CrossInstaller()
+    builder.add_platforms(platforms)
+    builder.start(script_path, args.keep, options)
+    builder.wait()
 
 
 def _parser():
     parser = argparse.ArgumentParser(
-        prog='crossinstaller',
+        prog="crossinstaller",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="Multi platform installer",
-        epilog='See "crossinstaller <command> -h" for more information '
-               'on a specific command.'
+        epilog="See \"crossinstaller <command> -h\" for more information "
+               "on a specific command."
     )
-    parser.add_argument('-V', '--version', action='version', version='v{}'.format(__version__),
-                        help='print version and exit')
+    parser.add_argument("script", nargs=1,
+                        help="script to build")
+    parser.add_argument("-p", "--platform", action="append",
+                        help="platform to build for")
+    parser.add_argument("-k", "--keep", "--debug", action="store_true",
+                        help="keep build directory")
+    parser.add_argument("-e", "--options", metavar="EXTRA_OPTIONS",
+                        help="pass these extra options to \"pyinstaller\"")
 
-    subparsers = parser.add_subparsers(
-        title='Available commands',
-        metavar=''
-    )
+    parser.add_argument("--log-level", default="WARNING",
+                        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                        help="set log level")
+    parser.add_argument("-V", "--version", action="version", version=f"v{__version__}",
+                        help="print version and exit")
 
-    # building executable
-    cparser = subparsers.add_parser(
-        'build',
-        aliases=['b'],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        help='Generate executables',
-        description="Generate executables"
-    )
-    cparser.add_argument('script', nargs=1, metavar='SCRIPT',
-                         help='Path to script')
-    cparser.add_argument('--keep', '--debug', action="store_true",
-                         help='Do not remove build files after creating executables')
-    cparser.add_argument('-e', '--options', metavar='EXTRA_OPTIONS',
-                         help='Pass these extra options to `pyinstaller`')
-    cparser.set_defaults(func=_build)
-
-    # subparser for editing platforms and Docker images
-    cparser = subparsers.add_parser(
-        'platform',
-        aliases=['p'],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        help='Manage platforms and Docker images',
-        description='Manage platforms and Docker images'
-    )
-
-    platform_subparser = cparser.add_subparsers(
-        title='Manage platforms and Docker images',
-        metavar=''
-    )
-
-    # add new platform
-    platform_cparser = platform_subparser.add_parser(
-        'add',
-        aliases=['a'],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        help='Add platforms',
-        description='Add platforms'
-    )
-    platform_cparser.add_argument('name', nargs=1, metavar='NAME',
-                                  help='Platform name')
-    platform_cparser.add_argument('-I', '--image', metavar='IMAGE', required=True,
-                                  help='path to Docker image')
-    platform_cparser.add_argument('-E', '--extra-file', metavar='FILE', action='append', nargs=1,
-                                  help='Extra file required by image. Can be used multiple times.')
-    platform_cparser.add_argument('-O', '--overwrite', action="store_true",
-                                  help='Overwrite image if already exists')
-    platform_cparser.set_defaults(func=_platform_add)
-
-    # remove platform
-    platform_cparser = platform_subparser.add_parser(
-        'remove',
-        aliases=['r'],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        help='Remove platforms',
-        description='Remove platforms'
-    )
-    platform_cparser.add_argument('name', nargs=1, metavar='NAME',
-                                  help='Platform name')
-    platform_cparser.set_defaults(func=_platform_remove)
-
-    # clear all platforms
-    platform_cparser = platform_subparser.add_parser(
-        'clear',
-        aliases=['c'],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        help='Remove all platforms',
-        description='Remove all platforms'
-    )
-    platform_cparser.add_argument('-F', '--force', action="store_true",
-                                  help='Do not ask for confirmation')
-    platform_cparser.set_defaults(func=_platform_clear)
-
-    # print all platforms
-    platform_cparser = platform_subparser.add_parser(
-        'list',
-        aliases=['l'],
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        help='Show available platforms',
-        description='Show available platforms'
-    )
-    platform_cparser.set_defaults(func=_platform_list)
-
+    parser.set_defaults(func=_build)
     return parser
 
 
 def main(argv):
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("docker").setLevel(logging.WARNING)
+    logging.basicConfig(format="%(asctime)s [%(threadName)s] [%(name)s] [%(levelname)s] %(message)s",
+                        level=logging.NOTSET)
+
     parser = _parser()
     args = parser.parse_args(argv)
+    logging.getLogger().setLevel(logging.getLevelName(args.log_level.upper()))
     if not hasattr(args, 'func'):
         parser.print_help()
         return
-
     args.func(args)
 
 
