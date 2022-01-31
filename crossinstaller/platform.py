@@ -29,7 +29,8 @@ class Platform:
         super(Platform, self).__init__()
 
         self.name = name
-        self.dockerfile = dockerfile
+        # dockerfile must be filename, not path
+        self.dockerfile = Path(dockerfile.name)
         self.path = dockerfile.parent
 
 
