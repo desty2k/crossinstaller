@@ -1,5 +1,4 @@
 import os
-import docker
 import logging
 from pathlib import Path
 from threading import Thread
@@ -33,6 +32,7 @@ class CrossInstaller:
         # make sure we are in the script's directory
         os.chdir(workdir)
         try:
+            import docker
             client = docker.from_env()
         except Exception as e:
             logging.error("Failed to instantiate Docker client: {}".format(e))
