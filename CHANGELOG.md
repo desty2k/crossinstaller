@@ -10,6 +10,7 @@
   - Bump Ubuntu version in Dockerfiles
   - Add examples to README.md
   - Update changelog-generator to 3.0.0, remove first release step
+  - Remove Python <3.9 support
 
 - 0.1.0:
   - Move all core function to `crossinstaller.building` module
