@@ -4,25 +4,36 @@ import logging
 import argparse
 from pathlib import Path
 
-from crossinstaller import CrossInstaller
+from crossinstaller import CrossInstaller, Platform
 from crossinstaller.config import __version__
 from crossinstaller.platform import get_default_platforms, get_platform_by_name
 
 
 def _build(args):
-    # check if script exists
-    script_path = Path(args.script[0])
-    if not script_path.exists():
-        raise FileNotFoundError(f"script {script_path} not found")
-    # make sure we are in the script's directory
-    os.chdir(script_path.parent)
+    # get script path
+    script_path = Path(args.script[0]).absolute()
+    # get workdir
+    workdir = args.workdir
+    if workdir is not None:
+        workdir = Path(args.workdir).absolute()
 
     # check if platforms are specified
     def_platforms = get_default_platforms()
-    platforms = []
-    if args.platform is None:
-        platforms = def_platforms
-    else:
+    platforms: list[Platform] = []
+
+    # check for user defined platforms
+    if args.add_platform is not None:
+        for name, dockerfile_path in args.add_platform:
+            if get_platform_by_name(name) is not None:
+                raise ValueError(f"platform {name} already exists")
+            dockerfile_path = Path(dockerfile_path)
+            print(Path.cwd(), dockerfile_path)
+            if not dockerfile_path.exists():
+                raise FileNotFoundError(f"dockerfile '{dockerfile_path}' not found")
+            platforms.append(Platform(name, dockerfile_path))
+
+    # check for default platforms
+    if args.platform is not None:
         for arg_platform in args.platform:
             platform = get_platform_by_name(arg_platform)
             if platform is None:
@@ -30,12 +41,16 @@ def _build(args):
                                  f"{', '.join([p.name for p in def_platforms])}")
             platforms.append(platform)
 
+    # check if we have any platforms
+    if len(platforms) == 0:
+        raise ValueError("you have to specify at least one platform")
+
     # check if options are specified
     options = args.options if args.options is not None else ""
 
     builder = CrossInstaller()
     builder.add_platforms(platforms)
-    builder.start(script_path, args.keep, options)
+    builder.start(script_path, workdir, args.keep, options)
     builder.wait()
 
 
@@ -49,8 +64,12 @@ def _parser():
     )
     parser.add_argument("script", nargs=1,
                         help="script to build")
+    parser.add_argument("-w", "--workdir", action="store",
+                        default=None, help="workdir to use")
     parser.add_argument("-p", "--platform", action="append",
                         help="platform to build for")
+    parser.add_argument("-a", "--add-platform", action="append", nargs=2,
+                        help="build for custom platform", metavar=("NAME", "DOCKERFILE_PATH"))
     parser.add_argument("-k", "--keep", "--debug", action="store_true",
                         help="keep build directory")
     parser.add_argument("-e", "--options", metavar="EXTRA_OPTIONS",

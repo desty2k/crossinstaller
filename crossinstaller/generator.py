@@ -18,17 +18,15 @@ class Generator:
         self.stopped = False
         self.scipt_path = script_path
         self.keep_build = keep_build
-        self.build_dir = Path(f"./build/{platform.name}")
-        self.dist_dir = Path(f"./dist/{platform.name}")
 
-        self.build_dir.mkdir(parents=True, exist_ok=True)
-        self.dist_dir.mkdir(parents=True, exist_ok=True)
+        self.platform.build_dir.mkdir(parents=True, exist_ok=True)
+        self.platform.dist_dir.mkdir(parents=True, exist_ok=True)
 
         self.command = "\"ls && pyinstaller \'{}\' --workpath {} --specpath {} --distpath {} {}\"".format(
             script_path.name,
-            self.build_dir.as_posix(),
-            self.build_dir.as_posix(),
-            self.dist_dir.as_posix(),
+            self.platform.build_dir.as_posix(),
+            self.platform.build_dir.as_posix(),
+            self.platform.dist_dir.as_posix(),
             extra_options)
 
     def start(self):
@@ -68,7 +66,7 @@ class Generator:
     def cleanup(self):
         if not self.keep_build:
             try:
-                shutil.rmtree(str(self.build_dir))
+                shutil.rmtree(str(self.platform.build_dir))
             except Exception as e:
                 self.logger.error(f"could not remove build directory: {e}")
         self.finished = True

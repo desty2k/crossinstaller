@@ -4,6 +4,8 @@ from pathlib import Path
 
 import crossinstaller
 
+__all__ = ("Platform", "win32", "win64", "i386", "amd64", "get_default_platforms", "get_platform_by_name")
+
 
 def is_default_platform_subclass(platform: type):
     """Check if object is a class that is a subclass of the default platform class."""
@@ -27,11 +29,15 @@ class Platform:
 
     def __init__(self, name: str, dockerfile: Path):
         super(Platform, self).__init__()
+        # get absolute path before changing working directory
+        dockerfile = dockerfile.absolute()
 
         self.name = name
         # dockerfile must be filename, not path
         self.dockerfile = Path(dockerfile.name)
         self.path = dockerfile.parent
+        self.build_dir = Path(f"./build/{self.name}")
+        self.dist_dir = Path(f"./dist/{self.name}")
 
 
 class DefaultPlatform(Platform):
