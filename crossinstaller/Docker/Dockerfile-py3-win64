@@ -1,17 +1,17 @@
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND noninteractive
 
 ARG WINE_VERSION=winehq-stable
-ARG PYTHON_VERSION=3.9.4
-ARG PYINSTALLER_VERSION=4.3
+ARG PYTHON_VERSION=3.9.10
+ARG PYINSTALLER_VERSION=4.8
 
 # we need wine for this all to work, so we'll use the PPA
 RUN set -x \
     && set -e \
     && dpkg --add-architecture i386 \
     && apt-get update -qy \
-    && apt-get install --no-install-recommends -qfy apt-transport-https software-properties-common wget \
+    && apt-get install --no-install-recommends -qfy apt-transport-https software-properties-common wget xvfb xdotool x11-utils xterm gpg-agent rename \
     && wget -nv https://dl.winehq.org/wine-builds/winehq.key \
     && apt-key add winehq.key \
     && add-apt-repository 'https://dl.winehq.org/wine-builds/ubuntu/' \
@@ -27,6 +27,11 @@ ENV WINEARCH win64
 ENV WINEDEBUG fixme-all
 ENV WINEPREFIX /wine
 
+# xvfb settings
+ENV DISPLAY :0
+RUN set -x \
+    && echo 'Xvfb $DISPLAY -screen 0 1024x768x24 &' >> /root/.bashrc
+
 # PYPI repository location
 ENV PYPI_URL=https://pypi.python.org/
 # PYPI index location
@@ -35,7 +40,8 @@ ENV PYPI_INDEX_URL=https://pypi.python.org/simple
 # install python in wine, using the msi packages to install, extracting
 # the files directly, since installing isn't running correctly.
 RUN set -x \
-    && winetricks win7 \
+    && WINEDLLOVERRIDES="mscoree,mshtml=" xvfb-run wine wineboot \
+    && xvfb-run winetricks -q win10 \
     && for msifile in `echo core dev exe lib path pip tcltk tools`; do \
         wget -nv "https://www.python.org/ftp/python/$PYTHON_VERSION/amd64/${msifile}.msi"; \
         wine msiexec /i "${msifile}.msi" /qb TARGETDIR=C:/Python; \
@@ -63,15 +69,18 @@ ENV W_TMP="$W_DRIVE_C/windows/temp/_$0"
 # install Microsoft Visual C++ Redistributable for Visual Studio 2017 dll files
 RUN set -x \
     && rm -f "$W_TMP"/* \
-    && wget -P "$W_TMP" https://download.visualstudio.microsoft.com/download/pr/11100230/15ccb3f02745c7b206ad10373cbca89b/VC_redist.x64.exe \
-    && cabextract -q --directory="$W_TMP" "$W_TMP"/VC_redist.x64.exe \
-    && cabextract -q --directory="$W_TMP" "$W_TMP/a10" \
+    && wget -P "$W_TMP" https://aka.ms/vs/16/release/vc_redist.x64.exe \
+    # https://download.visualstudio.microsoft.com/download/pr/36e45907-8554-4390-ba70-9f6306924167/97CC5066EB3C7246CF89B735AE0F5A5304A7EE33DC087D65D9DFF3A1A73FE803/VC_redist.x64.exe
+    && ls "$W_TMP"/ \
+    && cabextract -q --directory="$W_TMP" "$W_TMP"/vc_redist.x64.exe \
     && cabextract -q --directory="$W_TMP" "$W_TMP/a11" \
+    && cabextract -q --directory="$W_TMP" "$W_TMP/a12" \
+    && cabextract -q --directory="$W_TMP" "$W_TMP/a13" \
     && cd "$W_TMP" \
     && rename 's/_/\-/g' *.dll \
     && cp "$W_TMP"/*.dll "$W_SYSTEM64_DLLS"/
 
-# install pyinstaller and pyarmor
+# install pyinstaller
 RUN /usr/bin/pip install pyinstaller==$PYINSTALLER_VERSION
 
 # put the src folder inside wine
