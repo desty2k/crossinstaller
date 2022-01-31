@@ -88,12 +88,16 @@ def _parser():
 def main(argv):
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("docker").setLevel(logging.WARNING)
-    logging.basicConfig(format="%(asctime)s [%(threadName)s] [%(name)s] [%(levelname)s] %(message)s",
-                        level=logging.NOTSET)
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(asctime)s [%(threadName)s] [%(name)s] [%(levelname)s] %(message)s"))
+
+    logger = logging.getLogger()
+    logger.addHandler(handler)
 
     parser = _parser()
     args = parser.parse_args(argv)
-    logging.getLogger().setLevel(logging.getLevelName(args.log_level.upper()))
+    logger.setLevel(logging.getLevelName(args.log_level.upper()))
     if not hasattr(args, 'func'):
         parser.print_help()
         return
@@ -101,10 +105,6 @@ def main(argv):
 
 
 def main_entry():
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(levelname)-8s %(message)s',
-    )
     main(sys.argv[1:])
 
 
