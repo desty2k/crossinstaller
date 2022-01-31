@@ -52,6 +52,9 @@ class Generator:
                                                            volumes={str(Path.cwd()): {"bind": "/src",
                                                                                       "mode": "rw"}})
         self.logger.info(f"container id: {self.container.id}")
+        for log in self.container.attach(stdout=True, stderr=True, stream=True, logs=True):
+            self.logger.debug(str(log, encoding="utf-8"))
+
         exit_status = self.container.wait()['StatusCode']
         self.logger.info(f"container finished with exit status {exit_status}")
         self.cleanup()
